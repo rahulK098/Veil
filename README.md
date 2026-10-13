@@ -69,6 +69,7 @@ YAML file decides, and every decision is written to the audit log with the rule 
 |---|---|---|
 | Prompt → model | `guard.inbound(text)` | raises `BlockedError` |
 | Completion → caller | `guard.outbound(text)` | raises `BlockedError` |
+| Streamed completion | `guard.outbound_stream(chunks)` / `aoutbound_stream` | raises `BlockedError` |
 | Anything → logs / vector DB | `guard.for_logs(text)` / `for_vector_store(text)` | returns `None`; write is dropped |
 
 Policy (`policies/default.yaml`) maps entity → `redact` / `mask` / `hash` / `block` / `allow`
@@ -79,6 +80,28 @@ destination-wide default can never loosen an entity-specific rule.
 The audit log (SQLite) stores one row per guarded call and one per detection — including
 detections that were allowed or fell below threshold — with the policy path that decided the
 action and an HMAC of the span. Raw values are never stored.
+
+### Streaming
+
+```python
+for piece in guard.outbound_stream(provider_chunks):
+    print(piece, end="", flush=True)
+```
+
+Chunks are buffered before scanning, because an entity can straddle a boundary — `"SSN 536-"`
+then `"22-8741"` is invisible to anything scanning chunks in isolation.
+
+Streaming cannot honour a `block` the way `outbound()` can: once a chunk is emitted it cannot
+be recalled. Veil does not paper over that. `outbound_stream` picks its mode from the policy:
+
+| Mode | Behaviour | Guarantee |
+|---|---|---|
+| `BUFFERED` *(auto when the policy can block)* | accumulate, scrub once, emit at the end | identical to `outbound()` |
+| `INCREMENTAL` *(explicit opt-in)* | emit early, holding back a 96-char tail | no entity up to the tail margin is ever partially emitted |
+
+Because `policies/default.yaml` blocks SSNs, cards and credentials, it buffers by default; you
+must pass `mode=StreamMode.INCREMENTAL` to trade that guarantee for time-to-first-token. See
+[ADR-0010](docs/adr/0010-streaming-completions.md).
 
 ## Evaluation (ship gate)
 

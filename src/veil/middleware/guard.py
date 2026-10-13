@@ -7,12 +7,15 @@ Three surfaces, three code paths:
 * ``for_storage(text)``  — text about to be written to logs / a vector store. Blocks do
   **not** raise; the write is dropped (``None`` returned) and audited as ``dropped``, because a
   log line must never take down the user's request.
+
+``outbound_stream`` / ``aoutbound_stream`` cover the same ground as ``outbound`` for a
+completion that arrives in chunks (ADR-0010).
 """
 
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterable, AsyncIterator, Iterable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -21,9 +24,16 @@ from veil.audit.schema import Outcome
 from veil.audit.sink import AuditSink, MemoryAuditSink, SQLiteAuditSink
 from veil.detect.engine import DetectionEngine
 from veil.middleware.errors import BlockedError
+from veil.middleware.streaming import (
+    StreamBlockedError,
+    StreamConfig,
+    StreamMode,
+    StreamScrubber,
+)
 from veil.policy.actions import Hasher
 from veil.policy.engine import PolicyEngine, ScrubResult
 from veil.policy.loader import load_policy
+from veil.policy.resolve import can_block
 from veil.policy.schema import Destination, Policy
 
 _STORAGE_DESTINATIONS = frozenset({Destination.LOGS, Destination.VECTOR_STORE})
@@ -130,6 +140,84 @@ class Guard:
         result, _ = self._scan(text, destination)
         return result
 
+    # --- streaming ----------
+
+    def stream_config(self, mode: StreamMode | None = None, **overrides: int) -> StreamConfig:
+        """Resolve the streaming mode for the response destination.
+
+        With ``mode=None`` (the default) ``BUFFERED`` is chosen whenever the policy could
+        block, because incremental emission cannot honour a block — earlier chunks are already
+        gone. Pass ``mode`` explicitly to override, accepting the weaker guarantee.
+        """
+        if mode is None:
+            mode = (
+                StreamMode.BUFFERED
+                if can_block(self._policy, Destination.RESPONSE)
+                else StreamMode.INCREMENTAL
+            )
+        return StreamConfig(mode=mode, **overrides)
+
+    def outbound_stream(
+        self,
+        chunks: Iterable[str],
+        *,
+        request_id: str | None = None,
+        mode: StreamMode | None = None,
+        config: StreamConfig | None = None,
+    ) -> Iterator[str]:
+        """Scrub a streamed completion, yielding text that is safe to emit.
+
+        Raises ``BlockedError`` the moment a block fires. Chunks already yielded are, by the
+        nature of streaming, already with the caller — see ADR-0010. One audit operation is
+        written for the whole stream, not one per chunk.
+        """
+        scrubber = StreamScrubber(
+            scan=lambda text: self._policy_engine.apply(
+                text, self._detection.detect(text), Destination.RESPONSE
+            ),
+            config=config or self.stream_config(mode),
+        )
+        started = time.perf_counter()
+        try:
+            for chunk in chunks:
+                emitted = scrubber.feed(chunk)
+                if emitted:
+                    yield emitted
+            tail = scrubber.finish()
+            if tail:
+                yield tail
+        except StreamBlockedError as blocked:
+            raise self._stream_blocked(scrubber, blocked, started, request_id) from None
+        self._record_stream(scrubber, started, request_id)
+
+    async def aoutbound_stream(
+        self,
+        chunks: AsyncIterable[str],
+        *,
+        request_id: str | None = None,
+        mode: StreamMode | None = None,
+        config: StreamConfig | None = None,
+    ) -> AsyncIterator[str]:
+        """``outbound_stream`` for an async iterator of chunks."""
+        scrubber = StreamScrubber(
+            scan=lambda text: self._policy_engine.apply(
+                text, self._detection.detect(text), Destination.RESPONSE
+            ),
+            config=config or self.stream_config(mode),
+        )
+        started = time.perf_counter()
+        try:
+            async for chunk in chunks:
+                emitted = scrubber.feed(chunk)
+                if emitted:
+                    yield emitted
+            tail = scrubber.finish()
+            if tail:
+                yield tail
+        except StreamBlockedError as blocked:
+            raise self._stream_blocked(scrubber, blocked, started, request_id) from None
+        self._record_stream(scrubber, started, request_id)
+
     # --- session ----------
 
     @contextmanager
@@ -144,6 +232,41 @@ class Guard:
         detections = self._detection.detect(text)
         result = self._policy_engine.apply(text, detections, destination)
         return result, (time.perf_counter() - started) * 1000.0
+
+    def _record_stream(
+        self, scrubber: StreamScrubber, started: float, request_id: str | None
+    ) -> None:
+        """One audit operation for the whole stream, not one per chunk."""
+        decisions = scrubber.decisions
+        result = ScrubResult(
+            text="",
+            destination=Destination.RESPONSE,
+            decisions=decisions,
+            blocked=False,
+        )
+        self._audit.record(
+            scrubber.raw_text,
+            result,
+            outcome=_outcome(result),
+            latency_ms=(time.perf_counter() - started) * 1000.0,
+            request_id=request_id,
+        )
+
+    def _stream_blocked(
+        self,
+        scrubber: StreamScrubber,
+        blocked: StreamBlockedError,
+        started: float,
+        request_id: str | None,
+    ) -> BlockedError:
+        operation = self._audit.record(
+            scrubber.raw_text,
+            blocked.result,
+            outcome=Outcome.BLOCKED,
+            latency_ms=(time.perf_counter() - started) * 1000.0,
+            request_id=request_id,
+        )
+        return BlockedError(blocked.result, operation)
 
     def _raise_if_blocked(self, text: str, destination: Destination, request_id: str | None) -> str:
         result, latency = self._scan(text, destination)

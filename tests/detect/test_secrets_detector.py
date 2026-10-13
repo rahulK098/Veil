@@ -114,3 +114,37 @@ def test_disabled_type_is_skipped() -> None:
 
 def test_empty_text(detector: SecretsDetector) -> None:
     assert list(detector.detect("")) == []
+
+
+JWT = (
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNzAwMDAwMDAwfQ."
+    "dBjftJeZ4CVPmB92K27uhbUJU1p1r0wW1gFWFOEjXkA"
+)
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        "Authorization: Bearer {jwt}",
+        "token {jwt}.",  # sentence-ending period must not be swallowed
+        "{jwt} and more",
+        "{jwt}",
+    ],
+)
+def test_jwt_span_covers_the_signature(detector: SecretsDetector, template: str) -> None:
+    """detect-secrets ends its JWT pattern in a lazy quantifier, so the reported span stops
+    after the payload and leaves the signature in the clear. The eval's `exact` column caught
+    it (JWT matched 4/4 tokens with 0% exact spans)."""
+    text = template.format(jwt=JWT)
+    hits = _by_type(list(detector.detect(text)), "JWT")
+    assert len(hits) == 1
+    assert text[hits[0].start : hits[0].end] == JWT
+
+
+def test_jwt_without_signature_has_no_trailing_separator(detector: SecretsDetector) -> None:
+    header_payload = JWT.rsplit(".", 1)[0]
+    text = f"token {header_payload} end"
+    hits = _by_type(list(detector.detect(text)), "JWT")
+    assert len(hits) == 1
+    assert text[hits[0].start : hits[0].end] == header_payload

@@ -58,6 +58,23 @@ def resolve_rule(policy: Policy, entity_type: str, destination: Destination) -> 
     )
 
 
+def can_block(policy: Policy, destination: Destination) -> bool:
+    """Could any text be rejected outright at this destination?
+
+    Used to pick a safe streaming mode (ADR-0010): if a block is reachable, incremental
+    emission cannot honour it, so the caller must buffer. Checks every named entity plus the
+    fallback path an unlisted entity would take.
+    """
+    named = set(policy.entities)
+    dest_policy = policy.destinations.get(destination)
+    if dest_policy is not None:
+        named |= set(dest_policy.entities)
+    # "" matches no entity map, so it resolves down the defaults chain.
+    return any(
+        resolve_rule(policy, entity, destination).action is Action.BLOCK for entity in (*named, "")
+    )
+
+
 def _layers(policy: Policy, entity_type: str, destination: Destination) -> list[tuple[str, Rule]]:
     """Partial rules in precedence order, paired with their policy path."""
     layers: list[tuple[str, Rule]] = []

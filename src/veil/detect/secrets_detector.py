@@ -48,6 +48,15 @@ _VALUE_ONLY_TYPES: Final[frozenset[str]] = frozenset({"Secret Keyword", "Basic A
 
 _PRIVATE_KEY_END: Final = re.compile(r"-----END [A-Z ]*PRIVATE KEY( BLOCK)?-----")
 
+# detect-secrets' JWT pattern ends in a *lazy* quantifier
+# (``eyJ[...]+\.[...]+\.?[A-Za-z0-9-_.+/=]*?``), which matches zero characters, so the reported
+# span stops after the payload and leaves the signature in the clear. Found by the eval's
+# `exact` column: JWT matched every token but with 0% exact spans. This consumes the trailing
+# ``.signature`` so the whole token is governed.
+# The signature group is required here (not optional-and-lazy), so a token with no signature
+# yields a span without a dangling separator.
+_JWT_FULL: Final = re.compile(r"eyJ[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+(?:\.[A-Za-z0-9\-_+/=]+)?")
+
 # detect-secrets keeps plugin/filter configuration in process-global settings; guard scans.
 _SCAN_LOCK: Final = threading.Lock()
 
@@ -99,7 +108,7 @@ class SecretsDetector:
                                 recognizer=type(plugin).__name__,
                             )
                         )
-        return _dedupe(_extend_private_keys(detections, text))
+        return _dedupe(_extend_jwts(_extend_private_keys(detections, text), text))
 
 
 def _lines_with_offsets(text: str) -> Iterator[tuple[int, str]]:
@@ -152,6 +161,18 @@ def _find_all(line: str, value: str) -> list[tuple[int, int]]:
         spans.append((index, index + len(value)))
         index = line.find(value, index + len(value))
     return spans
+
+
+def _extend_jwts(detections: list[Detection], text: str) -> list[Detection]:
+    """Extend a JWT span over its signature segment (see ``_JWT_SIGNATURE``)."""
+    extended: list[Detection] = []
+    for det in detections:
+        if det.entity_type != "JWT":
+            extended.append(det)
+            continue
+        match = _JWT_FULL.match(text, det.start)
+        extended.append(det.model_copy(update={"end": match.end()}) if match else det)
+    return extended
 
 
 def _extend_private_keys(detections: list[Detection], text: str) -> list[Detection]:
