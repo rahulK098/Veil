@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so hash tokens are reproducible across steps. Test-only value: the audit log's
+  # span hashes are never compared against production ones.
+  VEIL_HASH_SECRET: ci-only-not-a-real-secret
+
+jobs:
+  quality:
+    name: lint · types · tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      # --locked fails if uv.lock is stale, so a dependency bump cannot land unlocked.
+      # The spaCy model is a locked dev dependency, so it is restored from cache
+      # rather than re-downloaded (~600 MB) on every run.
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Lint
+        run: uv run ruff check src tests eval
+
+      - name: Format
+        run: uv run ruff format --check src tests eval
+
+      - name: Types
+        run: uv run mypy src
+
+      - name: Tests
+        run: uv run pytest --cov=veil --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: warn
+
+  evaluation:
+    name: eval regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      # Datasets are generated, not committed (they contain synthetic credentials that trip
+      # secret scanners); run.py regenerates them deterministically from the seed.
+      - name: Run evaluation
+        run: uv run python eval/run.py --tag default
+
+      - name: Check against regression floors
+        run: uv run python eval/gate.py
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: |
+            eval/reports/default.json
+            docs/eval/default.md
+          if-no-files-found: warn

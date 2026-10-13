@@ -618,6 +618,14 @@ wheels = [
 ]
 
 [[package]]
+name = "en-core-web-lg"
+version = "3.8.0"
+source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }
+wheels = [
+    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl", hash = "sha256:293e9547a655b25499198ab15a525b05b9407a75f10255e405e8c3854329ab63" },
+]
+
+[[package]]
 name = "faker"
 version = "40.39.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1827,6 +1835,7 @@ eval = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "en-core-web-lg" },
     { name = "faker" },
     { name = "mypy" },
     { name = "pytest" },
@@ -1849,6 +1858,7 @@ provides-extras = ["eval"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "en-core-web-lg", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" },
     { name = "faker", specifier = ">=24.0" },
     { name = "mypy", specifier = ">=1.10" },
     { name = "pytest", specifier = ">=8.0" },

@@ -6,6 +6,14 @@
   Policy-driven PII/secrets scrubber that sits in front of every LLM call and every log write.
 </p>
 
+<p align="center">
+  <a href="https://github.com/rahulK098/Veil/actions/workflows/ci.yml">
+    <img src="https://github.com/rahulK098/Veil/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT">
+</p>
+
 ---
 
 LLM applications have **two** data-governance surfaces: what goes *to* the model, and what gets
@@ -122,10 +130,19 @@ docs/           ADRs 0001–0008, architecture, policy & audit reference, eval r
 ## Development
 
 ```bash
+uv sync --all-groups          # installs the spaCy model too (locked dev dependency)
 uv run ruff check src tests eval && uv run ruff format --check src tests eval
-uv run mypy src            # --strict
-uv run pytest --cov=veil  # 80 % floor enforced
+uv run mypy src               # --strict
+uv run pytest --cov=veil      # 80 % coverage floor enforced
+
+uv run python eval/run.py     # regenerate the evaluation reports
+uv run python eval/gate.py    # fail if any metric regressed below eval/thresholds.yaml
 ```
+
+CI runs exactly these on every push and pull request. The eval job is a real gate: if a change
+drops a per-entity precision/recall below its floor, shrinks the dataset, stops demonstrating a
+block, or starts redacting clean business text, the build fails. Latency is reported but not
+gated — see [ADR-0009](docs/adr/0009-ci-and-regression-gates.md).
 
 ## Limitations
 

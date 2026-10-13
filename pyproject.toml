@@ -19,12 +19,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Large spaCy model gives the NER recall the plan asks for; downloaded via `make model`.
+# Everything needed to run the eval harness (eval/run.py) without the full dev toolchain.
+# The spaCy model is not listed here: a direct-URL requirement cannot be published to PyPI,
+# so library users install it with `python -m spacy download en_core_web_lg`.
 eval = [
     "faker>=24.0",
 ]
 
 [dependency-groups]
+# Dependency groups are local-only (PEP 735) and never appear in published metadata, so the
+# pinned model wheel below is safe here. Declaring it means `uv sync` installs it and stops
+# pruning it, and CI restores it from the uv cache instead of re-downloading ~600 MB.
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
@@ -32,7 +37,11 @@ dev = [
     "mypy>=1.10",
     "types-pyyaml",
     "faker>=24.0",
+    "en-core-web-lg",
 ]
+
+[tool.uv.sources]
+en-core-web-lg = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }
 
 [build-system]
 requires = ["uv_build>=0.11.16,<0.12.0"]

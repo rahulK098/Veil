@@ -1,0 +1,49 @@
+# Regression floors for the default policy, enforced by eval/gate.py in CI.
+#
+# These are not targets — they are the line below which a change is a regression. They sit a
+# little under the numbers observed on 2026-10-13 so ordinary variation does not flake the
+# build, while any real loss of detection trips it.
+#
+# Latency is deliberately NOT gated here. Measured p50 moved 7.2 ms -> 9.8 ms between two runs
+# of identical code on the same machine; a shared CI runner is noisier still, so a latency gate
+# would fail for reasons unrelated to the change under test. Latency is reported in
+# docs/eval/, where a human can read the trend.
+
+# The dataset must not silently shrink: the ship gate promises 150+ labelled examples.
+min_labelled_examples: 150
+min_clean_documents: 100
+
+# A block must still be demonstrable end to end.
+require_block_demo: true
+
+# Per-entity floors. Only entities with real support are listed; an entity present in the
+# dataset but missing from this map is reported as "ungated" rather than silently ignored.
+entities:
+  US_SSN:            { min_support: 26, precision: 1.00, recall: 1.00 }
+  CREDIT_CARD:       { min_support: 19, precision: 1.00, recall: 0.95 }
+  EMAIL_ADDRESS:     { min_support: 33, precision: 1.00, recall: 1.00 }
+  IP_ADDRESS:        { min_support: 24, precision: 1.00, recall: 1.00 }
+  PERSON:            { min_support: 78, precision: 0.95, recall: 0.95 }
+  LOCATION:          { min_support: 14, precision: 0.85, recall: 0.95 }
+  STREET_ADDRESS:    { min_support: 14, precision: 0.95, recall: 0.85 }
+  PHONE_NUMBER:      { min_support: 21, precision: 1.00, recall: 0.70 }
+  SECRET_KEYWORD:    { min_support:  4, precision: 1.00, recall: 0.70 }
+  AWS_ACCESS_KEY:    { min_support: 13, precision: 1.00, recall: 1.00 }
+  GITHUB_TOKEN:      { min_support: 13, precision: 1.00, recall: 1.00 }
+  STRIPE_ACCESS_KEY: { min_support:  8, precision: 1.00, recall: 1.00 }
+  OPENAI_TOKEN:      { min_support:  4, precision: 1.00, recall: 1.00 }
+  SLACK_TOKEN:       { min_support:  4, precision: 1.00, recall: 1.00 }
+  JWT:               { min_support:  4, precision: 1.00, recall: 1.00 }
+  PRIVATE_KEY:       { min_support:  4, precision: 1.00, recall: 1.00 }
+  INTERNAL_CASE_ID:  { min_support: 12, precision: 1.00, recall: 1.00 }
+  EMPLOYEE_ID:       { min_support:  7, precision: 1.00, recall: 1.00 }
+
+# False positives on clean business text, as a count of documents out of 100.
+# `model` is the strict one: scrubbing legitimate prose on the way to the model is the
+# "redaction soup" failure the plan warns about.
+clean_corpus:
+  max_documents_modified:
+    model: 3
+    response: 3
+  # logs/vector_store intentionally ungated: the shipped policy hashes PERSON there, so the
+  # count tracks spaCy's proper-noun false positives, which is a known, documented trade-off.
