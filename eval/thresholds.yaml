@@ -26,7 +26,7 @@ entities:
   PERSON:            { min_support: 78, precision: 0.95, recall: 0.95 }
   LOCATION:          { min_support: 14, precision: 0.85, recall: 0.95 }
   STREET_ADDRESS:    { min_support: 14, precision: 0.95, recall: 0.85 }
-  PHONE_NUMBER:      { min_support: 21, precision: 1.00, recall: 0.70 }
+  PHONE_NUMBER:      { min_support: 21, precision: 1.00, recall: 0.95 }
   SECRET_KEYWORD:    { min_support:  4, precision: 1.00, recall: 0.70 }
   AWS_ACCESS_KEY:    { min_support: 13, precision: 1.00, recall: 1.00 }
   GITHUB_TOKEN:      { min_support: 13, precision: 1.00, recall: 1.00 }

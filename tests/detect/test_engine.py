@@ -87,3 +87,30 @@ def test_build_analyzer_registers_custom_specs() -> None:
 
     analyzer = build_analyzer(custom_specs=[EMPLOYEE_ID])
     assert "EMPLOYEE_ID" in analyzer.get_supported_entities(language="en")
+
+
+@pytest.mark.parametrize(
+    "number",
+    ["376.808.9422", "397-231-4658", "349-138-6569", "350-035-8334"],
+)
+def test_undiallable_numbers_are_deliberately_not_detected(
+    engine: DetectionEngine, number: str
+) -> None:
+    """Area codes 376/397/349/350 are not allocated in the NANP, so `phonenumbers` reports
+    these invalid and Presidio (leniency=VALID) does not match them.
+
+    This is intentional, not a gap: matching any 10-digit run is what leniency=POSSIBLE does,
+    and a sweep showed that puts a phone false positive in 97 of 100 clean business documents
+    (it matches "09" and "14"). See ADR-0011.
+    """
+    assert not [d for d in engine.detect(f"call {number} today") if d.entity_type == "PHONE_NUMBER"]
+
+
+@pytest.mark.parametrize(
+    "number",
+    ["212-555-0147", "(415) 555-0132", "617.555.0188", "+1 206 555 0170", "312-555-0143 x82"],
+)
+def test_allocated_numbers_are_detected_in_every_format(
+    engine: DetectionEngine, number: str
+) -> None:
+    assert [d for d in engine.detect(f"call {number} today") if d.entity_type == "PHONE_NUMBER"]

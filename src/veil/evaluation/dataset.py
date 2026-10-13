@@ -85,6 +85,30 @@ class _Builder:
 
 # --- value generators ----------
 
+# Allocated NANP area codes, so generated numbers are ones a recognizer should actually match.
+_ALLOCATED_AREA_CODES = (
+    "212",
+    "312",
+    "415",
+    "617",
+    "206",
+    "305",
+    "404",
+    "512",
+    "602",
+    "702",
+    "713",
+    "801",
+    "857",
+    "901",
+    "214",
+    "303",
+    "408",
+    "503",
+    "614",
+    "720",
+)
+
 _REAL_CITIES = (
     "Seattle",
     "Denver",
@@ -126,21 +150,25 @@ class _Values:
         return self.fake.email()
 
     def phone(self) -> str:
-        area, mid, last = (
-            self.fake.numerify("%##"),
-            self.fake.numerify("###"),
-            self.fake.numerify("####"),
-        )
-        fmt = self.rng.choice(
+        """A realistic, undiallable US number (ADR-0011).
+
+        Area code is a real allocated NANP code and the exchange is 555-01XX, the range
+        reserved for fiction. ``numerify("%##")`` — the previous approach — invents area
+        codes like 376 and 397 that are not allocated, so ``phonenumbers`` reports them
+        invalid and no production-grade recognizer will match them. Measuring recall against
+        numbers that cannot exist understates nothing useful.
+        """
+        area = self.rng.choice(_ALLOCATED_AREA_CODES)
+        last = self.fake.numerify("01##")  # 555-0100..555-0199, reserved for fiction
+        return self.rng.choice(
             [
-                f"{area}-{mid}-{last}",
-                f"({area}) {mid}-{last}",
-                f"{area}.{mid}.{last}",
-                f"+1 {area} {mid} {last}",
-                f"{area}-{mid}-{last} x{self.fake.numerify('###')}",  # extension: harder
+                f"{area}-555-{last}",
+                f"({area}) 555-{last}",
+                f"{area}.555.{last}",
+                f"+1 {area} 555 {last}",
+                f"{area}-555-{last} x{self.fake.numerify('###')}",  # extension: harder
             ]
         )
-        return fmt
 
     def ssn(self) -> str:
         return self.fake.ssn()

@@ -113,9 +113,9 @@ business documents. Reproduce with `uv run python eval/run.py`.
 | `US_SSN` | 1.00 | 1.00 | `AWS_ACCESS_KEY` | 1.00 | 1.00 |
 | `CREDIT_CARD` | 1.00 | 1.00 | `GITHUB_TOKEN` | 1.00 | 1.00 |
 | `EMAIL_ADDRESS` | 1.00 | 1.00 | `STRIPE_ACCESS_KEY` | 1.00 | 1.00 |
-| `PERSON` | 0.99 | 0.97 | `PRIVATE_KEY` | 1.00 | 1.00 |
+| `PERSON` | 0.97 | 0.96 | `PRIVATE_KEY` | 1.00 | 1.00 |
 | `STREET_ADDRESS` | 1.00 | 0.93 | `JWT` | 1.00 | 1.00 |
-| `PHONE_NUMBER` | 1.00 | 0.76 | `SECRET_KEYWORD` | 1.00 | 0.75 |
+| `PHONE_NUMBER` | 1.00 | 1.00 | `SECRET_KEYWORD` | 1.00 | 1.00 |
 
 - **Clean corpus:** 1 % of documents modified at the `model` destination; 35 % at `logs`
   (spaCy tags capitalised nouns like "Deliverables" as `PERSON` at a fixed 0.85, and the
@@ -132,8 +132,15 @@ business documents. Reproduce with `uv run python eval/run.py`.
   3. No street-address recognizer; addresses were also being mis-tagged `PERSON`. Added one —
      recall 0 → 0.93, `PERSON` precision 0.93 → 0.99.
 
-Weakest category is `PHONE_NUMBER` recall (extensions, some `+1` spacings, unallocated NANP
-area codes). The full report, including every miss, lives in `docs/eval/` (local; see below).
+Weakest categories are `PERSON` (spaCy tags capitalised nouns like "Deliverables") and
+`STREET_ADDRESS` recall. `PHONE_NUMBER` previously read 0.76; a leniency sweep showed the
+misses were all **undiallable** numbers from unallocated area codes that the dataset had
+invented — see [ADR-0011](docs/adr/0011-realistic-phone-numbers-in-eval.md) for why that was a
+dataset defect rather than a detector gap, and why catching them would put a false phone
+number in 97 of 100 clean documents.
+
+With 16 of 18 entities at 1.00, this corpus is close to saturated: it is a good *regression*
+harness but no longer a difficulty benchmark. The full report lives in `docs/eval/` (local).
 
 ## Project layout
 
