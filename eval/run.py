@@ -14,8 +14,8 @@ import logging
 import warnings
 from pathlib import Path
 
-from privy import Guard
-from privy.evaluation import (
+from veil import Guard
+from veil.evaluation import (
     evaluate,
     generate_clean,
     generate_labelled,
@@ -23,7 +23,7 @@ from privy.evaluation import (
     render_markdown,
     write_jsonl,
 )
-from privy.policy import Hasher
+from veil.policy import Hasher
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "eval" / "data"
@@ -56,7 +56,7 @@ def main() -> None:
     md_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
     md_path.write_text(
-        render_markdown(result, title=f"Privy evaluation — {args.tag}"), encoding="utf-8"
+        render_markdown(result, title=f"Veil evaluation — {args.tag}"), encoding="utf-8"
     )
 
     print(f"policy: {result.policy_name}")

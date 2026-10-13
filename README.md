@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Privy — Guard Your Data. Everywhere." width="720">
+  <img src="logo.png" alt="Veil — Shielding Your AI. Protecting Your Data." width="720">
 </p>
 
 <p align="center">
@@ -9,11 +9,11 @@
 ---
 
 LLM applications have **two** data-governance surfaces: what goes *to* the model, and what gets
-*written down about* the interaction (logs, traces, vector stores). Privy scans both directions,
+*written down about* the interaction (logs, traces, vector stores). Veil scans both directions,
 applies a per-destination policy, and writes an audit trail that lets a reviewer answer
 "why was this SSN allowed through?" from the log alone.
 
-Privy does **not** reinvent detection. It wraps [Microsoft Presidio](https://github.com/microsoft/presidio)
+Veil does **not** reinvent detection. It wraps [Microsoft Presidio](https://github.com/microsoft/presidio)
 (PII, spaCy NER) and [detect-secrets](https://github.com/Yelp/detect-secrets) (credentials),
 and adds the parts those tools don't provide: the policy engine, bidirectional middleware,
 audit log, and an evaluation harness that proves the numbers.
@@ -23,32 +23,32 @@ audit log, and an evaluation harness that proves the numbers.
 ```bash
 uv sync --all-groups
 uv run python -m spacy download en_core_web_lg   # NER model (~600 MB)
-export PRIVY_HASH_SECRET=...                      # key for deterministic hash tokens
+export VEIL_HASH_SECRET=...                      # key for deterministic hash tokens
 uv run pytest
 ```
 
 ```python
-import privy
+import veil
 
-guard = privy.Guard.from_policy("policies/default.yaml", audit_db="audit.db")
+guard = veil.Guard.from_policy("policies/default.yaml", audit_db="audit.db")
 guard.warm_up()  # loads spaCy once (~4 s)
 
 # 1. Wrap an LLM call — inputs scrubbed before the provider sees them, outputs after.
-@privy.redacted_call(guard, adapter=privy.ChatMessagesAdapter())
+@veil.redacted_call(guard, adapter=veil.ChatMessagesAdapter())
 def chat(*, messages):
     return client.chat.completions.create(model="gpt-4o", messages=messages)
 
 # 2. Or call the surfaces directly.
 with guard.session(request_id="req-42") as g:
     prompt = g.inbound("Hi, I'm Maria Gonzalez, card 4111 1111 1111 1111")
-    # -> raises privy.BlockedError: blocked at destination 'model': CREDIT_CARD (rule entities.CREDIT_CARD ...)
+    # -> raises veil.BlockedError: blocked at destination 'model': CREDIT_CARD (rule entities.CREDIT_CARD ...)
 
     line = g.for_logs("user Maria Gonzalez (maria@example.com) asked about billing")
     # -> "user <PERSON:9f3a1c…> (<EMAIL_ADDRESS:b07e…>) asked about billing"
 
 # 3. Every log line, automatically.
 import logging
-logging.getLogger().addFilter(privy.PrivyLogFilter(guard))
+logging.getLogger().addFilter(veil.VeilLogFilter(guard))
 ```
 
 The same `PERSON` is **allowed** on the way to the model (the assistant needs the name),
@@ -89,10 +89,12 @@ business documents. Reproduce with `uv run python eval/run.py`.
 - **Clean corpus:** 1 % of documents modified at the `model` destination; 35 % at `logs`
   (spaCy tags capitalised nouns like "Deliverables" as `PERSON` at a fixed 0.85, and the
   logs policy hashes `PERSON` — a deliberate, reported trade-off).
-- **Latency** (full path, detect + policy + audit, ~74-char inputs): **p50 7.2 ms, p95 9.6 ms**.
+- **Latency** (full path, detect + policy + audit, ~74-char inputs): **p50 ~10 ms, p95 ~15 ms**
+  on a developer laptop. Run-to-run variance is real (an earlier run measured p50 7.2 ms);
+  the claim is single-digit-to-low-teens milliseconds, not a benchmark.
 - **Demonstrated block:** an outbound completion echoing an SSN is rejected with a
   `BlockedError` naming the rule, and the audit rows show why.
-- **Three Presidio gaps found by the eval and closed** with recognizers in `privy.detect.custom`:
+- **Three Presidio gaps found by the eval and closed** with recognizers in `veil.detect.custom`:
   1. Mastercard 2-series BIN range (2221–2720) missing from Presidio's card regex — recall 0.74 → 1.00.
   2. `UK_NHS` is a bare mod-11 checksum that scores 1.0 on some US phone numbers; it was
      *blocking* requests. Excluded from the default detection set (opt-in for UK health data).
@@ -105,10 +107,10 @@ area codes). The full report, including every miss, lives in `docs/eval/` (local
 ## Project layout
 
 ```
-src/privy/
+src/veil/
   detect/       Presidio + detect-secrets adapters, unified Detection schema, custom recognizers
   policy/       YAML schema, rule resolution, redact/mask/hash actions, PolicyEngine
-  middleware/   Guard, @redacted_call, call adapters, PrivyLogFilter
+  middleware/   Guard, @redacted_call, call adapters, VeilLogFilter
   audit/        OperationRecord/DetectionRecord, SQLite + memory sinks
   evaluation/   dataset builder, span metrics, runner, report
 policies/       default.yaml, eval-baseline.yaml
@@ -122,7 +124,7 @@ docs/           ADRs 0001–0008, architecture, policy & audit reference, eval r
 ```bash
 uv run ruff check src tests eval && uv run ruff format --check src tests eval
 uv run mypy src            # --strict
-uv run pytest --cov=privy  # 80 % floor enforced
+uv run pytest --cov=veil  # 80 % floor enforced
 ```
 
 ## Limitations

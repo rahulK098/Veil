@@ -2,8 +2,8 @@ import logging
 
 import pytest
 
-from privy.policy.actions import Hasher, mask, redact
-from privy.policy.schema import MaskOptions
+from veil.policy.actions import Hasher, mask, redact
+from veil.policy.schema import MaskOptions
 
 
 def test_redact_uses_template() -> None:
@@ -61,16 +61,16 @@ def test_hasher_rejects_empty_secret() -> None:
 
 
 def test_hasher_from_env_uses_variable(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PRIVY_TEST_KEY", "s3cret")
-    assert Hasher.from_env("PRIVY_TEST_KEY").digest("a") == Hasher(b"s3cret").digest("a")
+    monkeypatch.setenv("VEIL_TEST_KEY", "s3cret")
+    assert Hasher.from_env("VEIL_TEST_KEY").digest("a") == Hasher(b"s3cret").digest("a")
 
 
 def test_hasher_from_env_warns_and_uses_ephemeral_key(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    monkeypatch.delenv("PRIVY_TEST_KEY", raising=False)
+    monkeypatch.delenv("VEIL_TEST_KEY", raising=False)
     with caplog.at_level(logging.WARNING):
-        a = Hasher.from_env("PRIVY_TEST_KEY")
-        b = Hasher.from_env("PRIVY_TEST_KEY")
-    assert "PRIVY_TEST_KEY is not set" in caplog.text
+        a = Hasher.from_env("VEIL_TEST_KEY")
+        b = Hasher.from_env("VEIL_TEST_KEY")
+    assert "VEIL_TEST_KEY is not set" in caplog.text
     assert a.digest("x") != b.digest("x")

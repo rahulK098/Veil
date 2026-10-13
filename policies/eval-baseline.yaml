@@ -6,10 +6,10 @@
 
 version: 1
 name: eval-baseline
-description: Presidio + detect-secrets defaults with the shipped policy rules, no Privy fixes.
+description: Presidio + detect-secrets defaults with the shipped policy rules, no Veil fixes.
 
 redact_template: "<{entity}>"
-hash_secret_env: PRIVY_HASH_SECRET
+hash_secret_env: VEIL_HASH_SECRET
 hash_token_length: 12
 
 defaults:

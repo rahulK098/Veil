@@ -3,15 +3,15 @@ from pathlib import Path
 
 import pytest
 
-from privy.audit import (
+from veil.audit import (
     AuditRecorder,
     MemoryAuditSink,
     Outcome,
     SQLiteAuditSink,
     to_jsonl,
 )
-from privy.detect import Detection, Source
-from privy.policy import Destination, Hasher, PolicyEngine, policy_from_dict
+from veil.detect import Detection, Source
+from veil.policy import Destination, Hasher, PolicyEngine, policy_from_dict
 
 POLICY = policy_from_dict(
     {

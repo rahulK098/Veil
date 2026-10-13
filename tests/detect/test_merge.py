@@ -1,5 +1,5 @@
-from privy.detect.merge import resolve_overlaps
-from privy.detect.schema import Detection, Source
+from veil.detect.merge import resolve_overlaps
+from veil.detect.schema import Detection, Source
 
 
 def _det(

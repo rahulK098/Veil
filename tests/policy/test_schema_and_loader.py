@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from privy.policy import (
+from veil.policy import (
     Action,
     Destination,
     Policy,

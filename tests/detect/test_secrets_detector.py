@@ -2,8 +2,8 @@
 
 import pytest
 
-from privy.detect.schema import Source
-from privy.detect.secrets_detector import (
+from veil.detect.schema import Source
+from veil.detect.secrets_detector import (
     CONFIDENCE_ENTROPY,
     CONFIDENCE_KEYWORD,
     CONFIDENCE_REGEX_TOKEN,

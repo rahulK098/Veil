@@ -6,7 +6,7 @@ import warnings
 
 import pytest
 
-from privy.detect import DetectionEngine, DetectorConfig
+from veil.detect import DetectionEngine, DetectorConfig
 
 
 @pytest.fixture(scope="session")

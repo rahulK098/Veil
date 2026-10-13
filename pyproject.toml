@@ -1,5 +1,5 @@
 [project]
-name = "privy"
+name = "veil"
 version = "0.1.0"
 description = "Policy-driven PII/secrets scrubber for LLM inputs, outputs, and logs"
 readme = "README.md"
@@ -47,7 +47,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["privy"]
+source = ["veil"]
 branch = true
 
 [tool.coverage.report]
@@ -63,7 +63,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "N"]
 
 [tool.ruff.lint.per-file-ignores]
 # Sentence templates read better on one line each.
-"src/privy/evaluation/dataset.py" = ["E501"]
+"src/veil/evaluation/dataset.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

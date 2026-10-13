@@ -1,7 +1,7 @@
 """PolicyEngine tests use hand-built detections so they run without the spaCy model."""
 
-from privy.detect import Detection, Source
-from privy.policy import Action, Destination, Hasher, PolicyEngine, policy_from_dict
+from veil.detect import Detection, Source
+from veil.policy import Action, Destination, Hasher, PolicyEngine, policy_from_dict
 
 POLICY = policy_from_dict(
     {

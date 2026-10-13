@@ -2,8 +2,8 @@
 
 import pytest
 
-from privy.detect import DetectionEngine, Source
-from privy.detect.presidio_detector import PresidioDetector, build_analyzer
+from veil.detect import DetectionEngine, Source
+from veil.detect.presidio_detector import PresidioDetector, build_analyzer
 
 pytestmark = pytest.mark.slow
 
@@ -83,7 +83,7 @@ def test_presidio_detector_rejects_unknown_entity(engine: DetectionEngine) -> No
 
 def test_build_analyzer_registers_custom_specs() -> None:
     pytest.importorskip("spacy")
-    from privy.detect.custom import EMPLOYEE_ID
+    from veil.detect.custom import EMPLOYEE_ID
 
     analyzer = build_analyzer(custom_specs=[EMPLOYEE_ID])
     assert "EMPLOYEE_ID" in analyzer.get_supported_entities(language="en")

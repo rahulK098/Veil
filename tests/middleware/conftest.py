@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from privy.audit import MemoryAuditSink
-from privy.detect import Detection, DetectionEngine, Source
-from privy.middleware import Guard
-from privy.policy import Hasher, load_policy
+from veil.audit import MemoryAuditSink
+from veil.detect import Detection, DetectionEngine, Source
+from veil.middleware import Guard
+from veil.policy import Hasher, load_policy
 
 ROOT = Path(__file__).resolve().parents[2]
 

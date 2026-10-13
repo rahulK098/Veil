@@ -1,7 +1,7 @@
 """Runs the full evaluation pipeline against the fake (regex) detection engine."""
 
-from privy.evaluation import Example, GoldSpan, evaluate, render_markdown
-from privy.middleware import Guard
+from veil.evaluation import Example, GoldSpan, evaluate, render_markdown
+from veil.middleware import Guard
 
 LABELLED = [
     Example(

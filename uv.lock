@@ -1174,56 +1174,6 @@ wheels = [
 ]
 
 [[package]]
-name = "privy"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "detect-secrets" },
-    { name = "presidio-analyzer" },
-    { name = "presidio-anonymizer" },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "spacy" },
-]
-
-[package.optional-dependencies]
-eval = [
-    { name = "faker" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "faker" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "detect-secrets", specifier = ">=1.5" },
-    { name = "faker", marker = "extra == 'eval'", specifier = ">=24.0" },
-    { name = "presidio-analyzer", specifier = ">=2.2" },
-    { name = "presidio-anonymizer", specifier = ">=2.2" },
-    { name = "pydantic", specifier = ">=2.6" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "spacy", specifier = ">=3.7" },
-]
-provides-extras = ["eval"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "faker", specifier = ">=24.0" },
-    { name = "mypy", specifier = ">=1.10" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "ruff", specifier = ">=0.5" },
-    { name = "types-pyyaml" },
-]
-
-[[package]]
 name = "pycparser"
 version = "3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1855,6 +1805,56 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e3/05/b17359e1cefb4f909b5e40b1b90a496d987258916dbbf88e842c729f510e/urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63", size = 458972, upload-time = "2026-09-15T19:29:36.253Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3", size = 135717, upload-time = "2026-09-15T19:29:34.577Z" },
+]
+
+[[package]]
+name = "veil"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "detect-secrets" },
+    { name = "presidio-analyzer" },
+    { name = "presidio-anonymizer" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "spacy" },
+]
+
+[package.optional-dependencies]
+eval = [
+    { name = "faker" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "faker" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "types-pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "detect-secrets", specifier = ">=1.5" },
+    { name = "faker", marker = "extra == 'eval'", specifier = ">=24.0" },
+    { name = "presidio-analyzer", specifier = ">=2.2" },
+    { name = "presidio-anonymizer", specifier = ">=2.2" },
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "spacy", specifier = ">=3.7" },
+]
+provides-extras = ["eval"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "faker", specifier = ">=24.0" },
+    { name = "mypy", specifier = ">=1.10" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "ruff", specifier = ">=0.5" },
+    { name = "types-pyyaml" },
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from privy.detect.custom import (
+from veil.detect.custom import (
     EMPLOYEE_ID,
     EXTENDED_RECOGNIZER_NAMES,
     INTERNAL_CASE_ID,

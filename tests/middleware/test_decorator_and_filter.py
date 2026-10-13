@@ -4,16 +4,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from privy.audit import MemoryAuditSink, Outcome
-from privy.middleware import (
+from veil.audit import MemoryAuditSink, Outcome
+from veil.middleware import (
     BlockedError,
     ChatMessagesAdapter,
     Guard,
-    PrivyLogFilter,
     TextAdapter,
+    VeilLogFilter,
     redacted_call,
 )
-from privy.policy import Destination
+from veil.policy import Destination
 
 SAFE = "Maria Gonzalez asks about maria@example.com"
 SSN = "my ssn is 536-22-8741"
@@ -179,16 +179,16 @@ def test_chat_adapter_plain_string_result(guard: Guard) -> None:
     assert chat(messages=[{"role": "user", "content": "hi"}]) == "m****@example.com"
 
 
-# --- PrivyLogFilter ----------
+# --- VeilLogFilter ----------
 
 
 def test_log_filter_scrubs_formatted_message(
     guard: Guard, sink: MemoryAuditSink, caplog: pytest.LogCaptureFixture
 ) -> None:
-    logger = logging.getLogger("privy.test.filter")
-    logger.addFilter(PrivyLogFilter(guard))
+    logger = logging.getLogger("veil.test.filter")
+    logger.addFilter(VeilLogFilter(guard))
     try:
-        with caplog.at_level(logging.INFO, logger="privy.test.filter"):
+        with caplog.at_level(logging.INFO, logger="veil.test.filter"):
             logger.info("user %s wrote in", "Maria Gonzalez", extra={"request_id": "r9"})
     finally:
         logger.filters.clear()
@@ -201,10 +201,10 @@ def test_log_filter_scrubs_formatted_message(
 def test_log_filter_drops_blocked_record(
     guard: Guard, sink: MemoryAuditSink, caplog: pytest.LogCaptureFixture
 ) -> None:
-    logger = logging.getLogger("privy.test.filter2")
-    logger.addFilter(PrivyLogFilter(guard))
+    logger = logging.getLogger("veil.test.filter2")
+    logger.addFilter(VeilLogFilter(guard))
     try:
-        with caplog.at_level(logging.INFO, logger="privy.test.filter2"):
+        with caplog.at_level(logging.INFO, logger="veil.test.filter2"):
             logger.info("customer ssn %s", "536-22-8741")
     finally:
         logger.filters.clear()

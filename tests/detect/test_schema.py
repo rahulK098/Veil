@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from privy.detect.schema import Detection, Source
+from veil.detect.schema import Detection, Source
 
 
 def _det(start: int, end: int, **kw: object) -> Detection:

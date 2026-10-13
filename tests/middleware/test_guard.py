@@ -1,8 +1,8 @@
 import pytest
 
-from privy.audit import MemoryAuditSink, Outcome
-from privy.middleware import BlockedError, Guard
-from privy.policy import Destination, Hasher
+from veil.audit import MemoryAuditSink, Outcome
+from veil.middleware import BlockedError, Guard
+from veil.policy import Destination, Hasher
 
 PROMPT = "Hi, I'm Maria Gonzalez (maria@example.com). My SSN is 536-22-8741."
 SAFE_PROMPT = "Hi, I'm Maria Gonzalez (maria@example.com), can you help with my order?"
@@ -107,14 +107,14 @@ def test_latency_is_recorded(guard: Guard, sink: MemoryAuditSink) -> None:
 def test_from_policy_with_sqlite(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     from tests.middleware.conftest import ROOT, FakeDetectionEngine
 
-    monkeypatch.setenv("PRIVY_HASH_SECRET", "k")
+    monkeypatch.setenv("VEIL_HASH_SECRET", "k")
     g = Guard.from_policy(
         ROOT / "policies" / "default.yaml",
         audit_db=tmp_path / "a.db",
         detection=FakeDetectionEngine(),
     )
     g.inbound(SAFE_PROMPT, request_id="x")
-    from privy.audit import SQLiteAuditSink
+    from veil.audit import SQLiteAuditSink
 
     assert isinstance(g.audit.sink, SQLiteAuditSink)
     assert len(g.audit.sink.operations_for_request("x")) == 1

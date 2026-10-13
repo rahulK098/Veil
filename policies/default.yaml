@@ -1,4 +1,4 @@
-# Privy default policy.
+# Veil default policy.
 #
 # Resolution order for any (entity, destination) — specificity first:
 #   destinations.<dest>.entities.<ENTITY>  >  entities.<ENTITY>
@@ -20,7 +20,7 @@ name: default
 description: Balanced policy for a customer-facing assistant with audited logging.
 
 redact_template: "<{entity}>"
-hash_secret_env: PRIVY_HASH_SECRET
+hash_secret_env: VEIL_HASH_SECRET
 hash_token_length: 12
 
 defaults:
@@ -80,7 +80,7 @@ entities:
   STREET_ADDRESS:
     action: redact
     min_confidence: 0.5
-    reason: Privy extended recognizer; Presidio has no address recognizer of its own.
+    reason: Veil extended recognizer; Presidio has no address recognizer of its own.
   MEDICAL_LICENSE:
     action: redact
     min_confidence: 0.5

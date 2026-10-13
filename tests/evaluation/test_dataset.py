@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from privy.evaluation import Example, generate_clean, generate_labelled, read_jsonl, write_jsonl
+from veil.evaluation import Example, generate_clean, generate_labelled, read_jsonl, write_jsonl
 
 
 def test_generate_labelled_meets_ship_gate_size() -> None:

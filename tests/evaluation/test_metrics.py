@@ -1,6 +1,6 @@
-from privy.detect import Detection, Source
-from privy.evaluation import Example, GoldSpan, aggregate, score_example
-from privy.evaluation.metrics import CleanCorpusMetrics, EntityMetrics
+from veil.detect import Detection, Source
+from veil.evaluation import Example, GoldSpan, aggregate, score_example
+from veil.evaluation.metrics import CleanCorpusMetrics, EntityMetrics
 
 
 def _det(entity: str, start: int, end: int) -> Detection:

@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from privy.evaluation import generate_clean, generate_labelled, write_jsonl
+from veil.evaluation import generate_clean, generate_labelled, write_jsonl
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 

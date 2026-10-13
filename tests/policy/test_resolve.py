@@ -1,4 +1,4 @@
-from privy.policy import Action, Destination, policy_from_dict, resolve_rule
+from veil.policy import Action, Destination, policy_from_dict, resolve_rule
 
 POLICY = policy_from_dict(
     {
