@@ -117,9 +117,9 @@ business documents. Reproduce with `uv run python eval/run.py`.
 | `STREET_ADDRESS` | 1.00 | 0.93 | `JWT` | 1.00 | 1.00 |
 | `PHONE_NUMBER` | 1.00 | 1.00 | `SECRET_KEYWORD` | 1.00 | 1.00 |
 
-- **Clean corpus:** 1 % of documents modified at the `model` destination; 35 % at `logs`
-  (spaCy tags capitalised nouns like "Deliverables" as `PERSON` at a fixed 0.85, and the
-  logs policy hashes `PERSON` — a deliberate, reported trade-off).
+- **Clean corpus:** 1 % of documents modified at the `model` destination, 16 % at `logs`
+  (down from 35 % — see finding 5). The remaining 16 are not errors: 15 are real city names
+  the policy chooses to redact in logs, plus one phone false positive.
 - **Latency** (full path, detect + policy + audit, ~74-char inputs): **p50 ~10 ms, p95 ~15 ms**
   on a developer laptop. Run-to-run variance is real (an earlier run measured p50 7.2 ms);
   the claim is single-digit-to-low-teens milliseconds, not a benchmark.
@@ -131,6 +131,12 @@ business documents. Reproduce with `uv run python eval/run.py`.
      *blocking* requests. Excluded from the default detection set (opt-in for UK health data).
   3. No street-address recognizer; addresses were also being mis-tagged `PERSON`. Added one —
      recall 0 → 0.93, `PERSON` precision 0.93 → 0.99.
+  4. detect-secrets' JWT pattern ends in a lazy quantifier, so spans stopped after the payload
+     and left signatures unredacted — caught by the `exact` column, not by P/R.
+  5. spaCy emits a **constant** 0.85 for every `PERSON`, making policy thresholds inert for
+     the entity that most needs them. Veil grades the score by span structure (≥2 capitalised
+     tokens vs. one), cutting clean-document over-redaction at `logs` from 35 % to 16 % with
+     no loss of recall. See [ADR-0012](docs/adr/0012-person-confidence-calibration.md).
 
 Weakest categories are `PERSON` (spaCy tags capitalised nouns like "Deliverables") and
 `STREET_ADDRESS` recall. `PHONE_NUMBER` previously read 0.76; a leniency sweep showed the

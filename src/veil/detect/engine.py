@@ -9,6 +9,7 @@ from functools import cached_property
 from pydantic import BaseModel, ConfigDict, Field
 
 from veil.detect.base import Detector
+from veil.detect.calibrate import calibrate
 from veil.detect.custom import DEFAULT_CUSTOM_SPECS, EXTENDED_RECOGNIZER_NAMES, PatternSpec
 from veil.detect.merge import resolve_overlaps
 from veil.detect.presidio_detector import (
@@ -42,6 +43,11 @@ class DetectorConfig(BaseModel):
         default=True,
         description="Veil-shipped recognizers closing documented Presidio gaps "
         "(2-series Mastercard, street addresses)",
+    )
+    calibrate_person: bool = Field(
+        default=True,
+        description="Replace spaCy's flat 0.85 PERSON score with one graded by span "
+        "structure, so policy thresholds actually bite (ADR-0012)",
     )
 
 
@@ -82,20 +88,24 @@ class DetectionEngine:
         self.detect("warm up")
 
     def detect(self, text: str) -> list[Detection]:
-        """Run every detector and return non-overlapping detections sorted by position."""
+        """Run every detector and return non-overlapping detections sorted by position.
+
+        Calibration runs *before* overlap resolution so a downgraded single-token PERSON
+        loses to a confident recognizer covering the same span (e.g. STREET_ADDRESS).
+        """
         if not text:
             return []
-        raw: list[Detection] = []
-        for detector in self.detectors:
-            raw.extend(detector.detect(text))
-        return resolve_overlaps(raw)
+        return resolve_overlaps(self._collect(text))
 
     def detect_raw(self, text: str) -> list[Detection]:
         """All detections before overlap resolution — for debugging and eval analysis."""
+        return sorted(self._collect(text), key=lambda d: (d.start, d.end))
+
+    def _collect(self, text: str) -> list[Detection]:
         raw: list[Detection] = []
         for detector in self.detectors:
             raw.extend(detector.detect(text))
-        return sorted(raw, key=lambda d: (d.start, d.end))
+        return calibrate(raw, text) if self._config.calibrate_person else raw
 
 
 __all__: Sequence[str] = ["DetectionEngine", "DetectorConfig"]

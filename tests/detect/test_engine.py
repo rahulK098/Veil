@@ -114,3 +114,26 @@ def test_allocated_numbers_are_detected_in_every_format(
     engine: DetectionEngine, number: str
 ) -> None:
     assert [d for d in engine.detect(f"call {number} today") if d.entity_type == "PHONE_NUMBER"]
+
+
+def test_person_calibration_grades_real_spacy_output(engine: DetectionEngine) -> None:
+    """spaCy scores both of these 0.85; calibration separates them (ADR-0012)."""
+    text = "The Deliverables were approved by Maria Gonzalez on Tuesday."
+    people = {
+        text[d.start : d.end]: d.confidence
+        for d in engine.detect(text)
+        if d.entity_type == "PERSON"
+    }
+    assert people.get("Maria Gonzalez") == 0.85
+    assert people.get("Deliverables", 1.0) <= 0.4
+
+
+def test_calibration_can_be_disabled(engine: DetectionEngine) -> None:
+    from veil.detect import DetectorConfig
+
+    raw = DetectionEngine(DetectorConfig(calibrate_person=False))
+    # Reuse the loaded analyzer: build_analyzer costs ~4 s.
+    raw.__dict__["detectors"] = engine.detectors
+    text = "The Deliverables were approved."
+    scores = [d.confidence for d in raw.detect(text) if d.entity_type == "PERSON"]
+    assert scores == [0.85]

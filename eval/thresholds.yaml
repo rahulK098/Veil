@@ -45,5 +45,8 @@ clean_corpus:
   max_documents_modified:
     model: 3
     response: 3
-  # logs/vector_store intentionally ungated: the shipped policy hashes PERSON there, so the
-  # count tracks spaCy's proper-noun false positives, which is a known, documented trade-off.
+    # Gated since ADR-0012 cut these from 35 to 16. The residual is 15 correctly-identified
+    # city names the policy redacts at logs, plus one phone FP -- a policy stance, not drift.
+    # Any regression in PERSON calibration shows up here immediately.
+    logs: 20
+    vector_store: 20
