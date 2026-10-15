@@ -86,3 +86,39 @@ def test_series2_mastercard_recognizer_keeps_luhn_validation() -> None:
 
 def test_extended_recognizer_names_match_instances() -> None:
     assert {str(r.name) for r in extended_recognizers()} == EXTENDED_RECOGNIZER_NAMES
+
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        "221B Baker Street",  # UK: trailing letter on the house number
+        "10A Church Lane",
+        "Hauptstrasse 14",  # DE: suffix inside the word, number last
+        "Hauptstraße 14",
+        "Kirchweg 7",
+        "Prinsengracht 263",  # NL
+        "Storgatan 12",  # SV
+    ],
+)
+def test_street_address_covers_uk_and_continental_forms(address: str) -> None:
+    """Found by the hard set (ADR-0013): both forms were missed outright before."""
+    rec = STREET_ADDRESS.to_recognizer()
+    text = f"deliver to {address}, please"
+    assert [text[r.start : r.end] for r in rec.analyze(text, entities=["STREET_ADDRESS"])] == [
+        address
+    ]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Version v5.19.8 deprecates the legacy REST v1 endpoints.",
+        "as of February 02, 2027 between Bridges-Williams and the Client",
+        "increase volume to 500 GB before the load test",
+        "the Hauptstrasse office reopened",  # compound word with no number
+        "45 stories pointed",
+    ],
+)
+def test_street_address_still_ignores_prose_and_versions(text: str) -> None:
+    rec = STREET_ADDRESS.to_recognizer()
+    assert rec.analyze(text, entities=["STREET_ADDRESS"]) == []

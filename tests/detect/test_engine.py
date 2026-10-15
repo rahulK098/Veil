@@ -131,7 +131,7 @@ def test_person_calibration_grades_real_spacy_output(engine: DetectionEngine) ->
 def test_calibration_can_be_disabled(engine: DetectionEngine) -> None:
     from veil.detect import DetectorConfig
 
-    raw = DetectionEngine(DetectorConfig(calibrate_person=False))
+    raw = DetectionEngine(DetectorConfig(calibrate_scores=False))
     # Reuse the loaded analyzer: build_analyzer costs ~4 s.
     raw.__dict__["detectors"] = engine.detectors
     text = "The Deliverables were approved."

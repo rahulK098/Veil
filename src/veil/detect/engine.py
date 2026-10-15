@@ -44,10 +44,11 @@ class DetectorConfig(BaseModel):
         description="Veil-shipped recognizers closing documented Presidio gaps "
         "(2-series Mastercard, street addresses)",
     )
-    calibrate_person: bool = Field(
+    calibrate_scores: bool = Field(
         default=True,
-        description="Replace spaCy's flat 0.85 PERSON score with one graded by span "
-        "structure, so policy thresholds actually bite (ADR-0012)",
+        description="Replace Presidio's uninformative constant scores with graded ones: "
+        "PERSON by span structure (ADR-0012), IP_ADDRESS by reserved range and version "
+        "context (ADR-0014), so policy thresholds actually bite",
     )
 
 
@@ -105,7 +106,7 @@ class DetectionEngine:
         raw: list[Detection] = []
         for detector in self.detectors:
             raw.extend(detector.detect(text))
-        return calibrate(raw, text) if self._config.calibrate_person else raw
+        return calibrate(raw, text) if self._config.calibrate_scores else raw
 
 
 __all__: Sequence[str] = ["DetectionEngine", "DetectorConfig"]

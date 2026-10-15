@@ -81,6 +81,13 @@ def check(report: dict[str, Any], thresholds: dict[str, Any]) -> tuple[list[str]
         ceiling = hard_floors["max_negative_fp_rate"]
         if fp_rate > ceiling:
             violations.append(f"hard negatives: fp rate {fp_rate:.3f} > {ceiling:.2f}")
+        for destination, limit in hard_floors.get("max_modified", {}).items():
+            actual = hard.get("negatives_modified", {}).get(destination, 0)
+            if actual > limit:
+                violations.append(
+                    f"hard negatives: {actual} PII-free documents modified at "
+                    f"'{destination}' > {limit}"
+                )
         for destination, limit in hard_floors.get("max_blocked", {}).items():
             actual = hard["negatives_blocked"].get(destination, 0)
             if actual > limit:

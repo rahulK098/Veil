@@ -151,8 +151,8 @@ harness, not a difficulty benchmark. So there is a second, deliberately hard one
 
 | Hard set (42 curated documents) | Result |
 |---|---|
-| Real PII in awkward shapes (JSON, URLs, obfuscation, international formats) | **69 % recall** (18/26 spans) |
-| PII-free text that *looks* like PII (semver, UUIDs, git SHAs, order numbers) | **80 %** produce a false detection |
+| Real PII in awkward shapes (JSON, URLs, obfuscation, international formats) | **77 % recall** (20/26 spans) |
+| PII-free text that policy would **modify** | **20 %** at `model` (4/20), 35 % at `logs` |
 | **PII-free text that would be refused outright** | **10 %** (2/20) |
 
 That last row is the number precision and recall cannot show you: `cost centre 536-22-8741`

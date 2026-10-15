@@ -98,13 +98,33 @@ _STREET_SUFFIXES = (
     "Stream|Street|St|Summit|Terrace|Ter|Throughway|Trace|Track|Trafficway|Trail|Tunnel|"
     "Turnpike|Underpass|Union|Valley|Viaduct|View|Village|Ville|Vista|Walk|Wall|Way|Well|Wood"
 )
-# Presidio compiles patterns with re.IGNORECASE, so the capitalisation constraint is wrapped in
-# an inline (?-i:...) group; the lookbehind keeps "v5.19.8 deprecates ..." from matching.
+# Street names that carry the suffix inside the word rather than after it, as German, Dutch
+# and Scandinavian addresses do ("Hauptstrasse 14"). These put the number *after* the name,
+# so they need their own alternative rather than a tweak to the Anglo pattern.
+_COMPOUND_SUFFIXES = (
+    r"stra(?:ss|ß)e|str\.?|gasse|weg|platz|allee|ring|damm|ufer|steig|"  # de
+    r"straat|laan|plein|gracht|kade|"  # nl
+    r"gatan|vagen|vägen|gata|vei|veien|gade|vej"  # sv / no / da
+)
+
+# Presidio compiles patterns with re.IGNORECASE, so capitalisation constraints are wrapped in
+# inline (?-i:...) groups. The lookbehind keeps "v5.19.8 deprecates ..." from matching.
+#
+# The house number allows an optional trailing letter ("221B Baker Street") and an optional
+# leading one; both are ordinary in UK and Irish addresses. Found by the hard set (ADR-0013),
+# which previously missed "221B Baker Street" and "Hauptstrasse 14" outright.
 STREET_ADDRESS = PatternSpec(
     entity_type="STREET_ADDRESS",
     regex=(
-        r"(?<![.\-])\b\d{1,6}\s+(?-i:(?:[A-Z][a-z]+\s+){1,3}(?:" + _STREET_SUFFIXES + r"))s?\b\.?"
+        r"(?:"
+        # Anglo: [number][letter?] Street Name Suffix [unit?]
+        r"(?<![.\-])\b\d{1,6}[A-Za-z]?\s+"
+        r"(?-i:(?:[A-Z][a-z]+\s+){1,3}(?:" + _STREET_SUFFIXES + r"))s?\b\.?"
         r"(?:\s+(?:Apt\.?|Suite|Ste\.?|Unit|#)\s*\d+[A-Za-z]?)?"
+        r"|"
+        # Continental: StreetnameSuffix [number]
+        r"(?-i:\b[A-Z][a-z]+(?:" + _COMPOUND_SUFFIXES + r"))\s+\d{1,4}[A-Za-z]?\b"
+        r")"
     ),
     score=0.9,
     context=("address", "ship", "deliver", "street"),

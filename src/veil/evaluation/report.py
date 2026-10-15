@@ -166,13 +166,21 @@ def _hard_section(hard: HardCaseMetrics) -> list[str]:
         "The severe case, and the one no standard metric counts: a `block` rule firing on text "
         "that contains no PII means a user's request fails.",
         "",
-        "| Destination | Hard negatives blocked |",
-        "|---|---:|",
+        "`modified` counts documents whose text policy would alter; `blocked` counts requests "
+        "it would refuse. Both are separate from the detection counts above, because "
+        "calibration lowers a score without removing the detection — only these columns show "
+        "its effect.",
+        "",
+        "| Destination | Modified | Blocked |",
+        "|---|---:|---:|",
     ]
     for destination in ("model", "response", "logs", "vector_store"):
-        count = hard.negatives_blocked.get(destination, 0)
+        blocked = hard.negatives_blocked.get(destination, 0)
+        changed = hard.negatives_modified.get(destination, 0)
         lines.append(
-            f"| `{destination}` | {count} / {hard.negatives} ({hard.block_rate(destination):.0%}) |"
+            f"| `{destination}` | {changed} / {hard.negatives} "
+            f"({hard.modified_rate(destination):.0%}) | {blocked} / {hard.negatives} "
+            f"({hard.block_rate(destination):.0%}) |"
         )
     if hard.block_examples:
         lines += ["", "Blocking documents: " + ", ".join(f"`{i}`" for i in hard.block_examples)]

@@ -78,7 +78,7 @@ detection:
   spacy_model: en_core_web_lg
   enable_secrets: true
   enable_extended_recognizers: false
-  calibrate_person: false
+  calibrate_scores: false
   presidio_excluded_entities: [ORGANIZATION, DATE_TIME, URL, NRP]
   custom_recognizers:
     - { entity_type: INTERNAL_CASE_ID, regex: '\bCASE-\d{4}-\d{5,6}\b', score: 0.85, context: [case, matter, ticket] }

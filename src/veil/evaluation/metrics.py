@@ -151,6 +151,13 @@ class HardCaseMetrics(BaseModel):
     negatives: int
     negatives_with_detection: int
     negative_detections_by_entity: dict[str, int]
+    negatives_modified: dict[str, int] = Field(
+        default_factory=dict,
+        description="Per destination: hard negatives whose text policy would actually alter. "
+        "Distinct from negatives_with_detection, which counts detections regardless of "
+        "confidence — calibration lowers scores without removing detections, so only this "
+        "shows its effect.",
+    )
     negatives_blocked: dict[str, int] = Field(
         description="Per destination: hard negatives a policy would reject outright"
     )
@@ -169,6 +176,11 @@ class HardCaseMetrics(BaseModel):
     def block_rate(self, destination: str) -> float:
         return (
             self.negatives_blocked.get(destination, 0) / self.negatives if self.negatives else 0.0
+        )
+
+    def modified_rate(self, destination: str) -> float:
+        return (
+            self.negatives_modified.get(destination, 0) / self.negatives if self.negatives else 0.0
         )
 
 

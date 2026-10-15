@@ -92,6 +92,7 @@ def evaluate_hard(
     with_detection = 0
     by_entity: Counter[str] = Counter()
     blocked: Counter[str] = Counter()
+    modified: Counter[str] = Counter()
     block_ids: list[str] = []
     for ex in negatives:
         detections = guard.detection.detect(ex.text)
@@ -100,9 +101,12 @@ def evaluate_hard(
         by_entity.update(d.entity_type for d in detections)
         blocks_anywhere = False
         for dest in Destination:
-            if guard.scan(ex.text, dest).blocked:
+            result = guard.scan(ex.text, dest)
+            if result.blocked:
                 blocked[dest.value] += 1
                 blocks_anywhere = True
+            elif result.text != ex.text:
+                modified[dest.value] += 1
         if blocks_anywhere:
             block_ids.append(ex.id)
 
@@ -115,6 +119,7 @@ def evaluate_hard(
         negatives=len(negatives),
         negatives_with_detection=with_detection,
         negative_detections_by_entity=dict(sorted(by_entity.items())),
+        negatives_modified=dict(modified),
         negatives_blocked=dict(blocked),
         block_examples=tuple(block_ids),
     )

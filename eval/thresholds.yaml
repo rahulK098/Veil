@@ -55,8 +55,15 @@ clean_corpus:
 # aspirations: they stop the hard numbers sliding while detection is tuned. Raise them
 # deliberately when a change improves the measurement.
 hard:
-  min_positive_recall: 0.65     # measured 0.69
-  max_negative_fp_rate: 0.85    # measured 0.80
+  min_positive_recall: 0.75     # measured 0.77 (was 0.69 before ADR-0014)
+  max_negative_fp_rate: 0.85    # measured 0.80; counts detections at any confidence
+  # What policy actually does to PII-free text. Calibration lowers scores without removing
+  # detections, so this is the column that moves when detection improves.
+  max_modified:
+    model: 5          # measured 4, was 7
+    response: 5
+    logs: 8           # measured 7, was 11
+    vector_store: 8
   # The severe one: PII-free business text refused outright. Measured 2/20 at every
   # destination. This must never grow.
   max_blocked:
