@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from veil.evaluation.metrics import HardCaseMetrics
 from veil.evaluation.runner import EvalResult
 
 
@@ -47,6 +48,9 @@ def render_markdown(result: EvalResult, *, title: str = "Veil evaluation report"
             f"| `{dest}` | {c.documents_modified.get(dest, 0)} ({c.modified_rate(dest):.1%}) | "
             f"{c.documents_blocked.get(dest, 0)} |"
         )
+
+    if result.hard is not None:
+        lines += _hard_section(result.hard)
 
     lines += ["", "## Latency (full guarded path: detect + policy + audit)", ""]
     lines += [
@@ -116,3 +120,60 @@ def render_markdown(result: EvalResult, *, title: str = "Veil evaluation report"
         lines.append("_none_")
 
     return "\n".join(lines) + "\n"
+
+
+def _hard_section(hard: HardCaseMetrics) -> list[str]:
+    """The curated hard set — reported apart from the main corpus (ADR-0013)."""
+    lines = [
+        "",
+        "## Hard cases (curated)",
+        "",
+        "Kept separate from the headline numbers: these are chosen to be difficult, so mixing "
+        "them in would make the main corpus incomparable across runs.",
+        "",
+        f"**Hard positives** — real PII in awkward shapes: "
+        f"{hard.positives_found}/{hard.positive_spans} spans found "
+        f"({hard.positive_recall:.0%} recall) across {hard.positives} documents.",
+        "",
+    ]
+    if hard.missed_by_entity:
+        lines += ["| Entity | Missed |", "|---|---:|"]
+        lines += [f"| `{k}` | {v} |" for k, v in hard.missed_by_entity.items()]
+        lines += ["", "Examples of what was missed:", ""]
+        for miss in hard.miss_examples[:10]:
+            got = f" → detected as {miss.predicted_as}" if miss.predicted_as else ""
+            lines.append(f"- `{miss.entity_type}` in `{miss.example_id}`: `{miss.span_text}`{got}")
+    else:
+        lines.append("_Nothing missed._")
+
+    lines += [
+        "",
+        f"**Hard negatives** — text with no PII that is shaped like PII: "
+        f"{hard.negatives_with_detection}/{hard.negatives} documents produced at least one "
+        f"detection ({hard.negative_fp_rate:.0%}).",
+        "",
+    ]
+    if hard.negative_detections_by_entity:
+        lines.append(
+            "Spurious detections: "
+            + ", ".join(f"`{k}` ×{v}" for k, v in hard.negative_detections_by_entity.items())
+        )
+
+    lines += [
+        "",
+        "### Legitimate text that would be refused outright",
+        "",
+        "The severe case, and the one no standard metric counts: a `block` rule firing on text "
+        "that contains no PII means a user's request fails.",
+        "",
+        "| Destination | Hard negatives blocked |",
+        "|---|---:|",
+    ]
+    for destination in ("model", "response", "logs", "vector_store"):
+        count = hard.negatives_blocked.get(destination, 0)
+        lines.append(
+            f"| `{destination}` | {count} / {hard.negatives} ({hard.block_rate(destination):.0%}) |"
+        )
+    if hard.block_examples:
+        lines += ["", "Blocking documents: " + ", ".join(f"`{i}`" for i in hard.block_examples)]
+    return lines

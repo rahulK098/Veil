@@ -1,5 +1,7 @@
 """Runs the full evaluation pipeline against the fake (regex) detection engine."""
 
+import pytest
+
 from veil.evaluation import Example, GoldSpan, evaluate, render_markdown
 from veil.middleware import Guard
 
@@ -88,3 +90,76 @@ def test_render_markdown_with_no_block_and_misses(guard: Guard) -> None:
     assert "_No block demonstrated" in md
     assert "`PERSON`: 1. e.g. `Maria Gonzalez`" in md  # spurious detection listed
     assert "_none_" in md  # no false negatives
+
+
+# --- hard set (ADR-0013) ----------
+
+HARD_POS = [
+    Example(
+        id="hp-a",
+        text="contact Maria Gonzalez at maria@example.com",
+        spans=(
+            GoldSpan(entity_type="PERSON", start=8, end=22),
+            GoldSpan(entity_type="EMAIL_ADDRESS", start=26, end=43),
+        ),
+        category="hard_pii",
+    ),
+    Example(
+        id="hp-b",
+        text="ssn 5 3 6 2 2 8 7 4 1 spaced out",  # fake engine cannot find this
+        spans=(GoldSpan(entity_type="US_SSN", start=4, end=21),),
+        category="hard_pii",
+    ),
+]
+HARD_NEG = [
+    Example(id="hn-a", text="version 10.0.0.1 shipped", category="hard_negative"),
+    Example(id="hn-b", text="order ORD-12345 dispatched", category="hard_negative"),
+    Example(id="hn-c", text="ssn-shaped ledger code 536-22-8741", category="hard_negative"),
+]
+
+
+def test_evaluate_scores_the_hard_set(guard: Guard) -> None:
+    result = evaluate(guard, LABELLED, CLEAN, hard_positives=HARD_POS, hard_negatives=HARD_NEG)
+    hard = result.hard
+    assert hard is not None
+    assert hard.positive_spans == 3
+    assert hard.positives_found == 2  # the spaced SSN is missed
+    assert hard.missed_by_entity == {"US_SSN": 1}
+    assert hard.positive_recall == pytest.approx(2 / 3)
+
+    assert hard.negatives == 3
+    assert hard.negatives_with_detection == 2  # version string -> IP, ledger code -> SSN
+    assert "IP_ADDRESS" in hard.negative_detections_by_entity
+
+    # The severe metric: PII-free text that policy would refuse outright.
+    assert hard.negatives_blocked["model"] == 1
+    assert hard.block_examples == ("hn-c",)
+    assert hard.block_rate("model") == pytest.approx(1 / 3)
+
+
+def test_hard_section_is_rendered(guard: Guard) -> None:
+    result = evaluate(guard, LABELLED, CLEAN, hard_positives=HARD_POS, hard_negatives=HARD_NEG)
+    md = render_markdown(result)
+    assert "## Hard cases (curated)" in md
+    assert "### Legitimate text that would be refused outright" in md
+    assert "`hn-c`" in md
+    assert "536-22-8741" not in md  # raw values never reach the report
+
+
+def test_hard_section_absent_when_no_hard_data(guard: Guard) -> None:
+    result = evaluate(guard, LABELLED, CLEAN)
+    assert result.hard is None
+    assert "## Hard cases" not in render_markdown(result)
+
+
+def test_hard_section_handles_a_clean_sweep(guard: Guard) -> None:
+    """No misses and no spurious detections must still render."""
+    result = evaluate(
+        guard,
+        LABELLED,
+        CLEAN,
+        hard_positives=[HARD_POS[0]],
+        hard_negatives=[Example(id="hn-x", text="nothing to see", category="hard_negative")],
+    )
+    assert result.hard is not None and result.hard.positive_recall == 1.0
+    assert "_Nothing missed._" in render_markdown(result)

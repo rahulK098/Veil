@@ -68,6 +68,27 @@ def check(report: dict[str, Any], thresholds: dict[str, Any]) -> tuple[list[str]
                 f"{entity}: ungated ({m['tp'] + m['fn']} gold spans) — add a floor or ignore"
             )
 
+    hard_floors = thresholds.get("hard")
+    hard = report.get("hard")
+    if hard_floors and not hard:
+        violations.append("hard set is gated but absent from the report")
+    elif hard_floors and hard:
+        recall = hard["positives_found"] / hard["positive_spans"] if hard["positive_spans"] else 0.0
+        floor = hard_floors["min_positive_recall"]
+        if recall < floor:
+            violations.append(f"hard positives: recall {recall:.3f} < {floor:.2f}")
+        fp_rate = hard["negatives_with_detection"] / hard["negatives"] if hard["negatives"] else 0.0
+        ceiling = hard_floors["max_negative_fp_rate"]
+        if fp_rate > ceiling:
+            violations.append(f"hard negatives: fp rate {fp_rate:.3f} > {ceiling:.2f}")
+        for destination, limit in hard_floors.get("max_blocked", {}).items():
+            actual = hard["negatives_blocked"].get(destination, 0)
+            if actual > limit:
+                violations.append(
+                    f"hard negatives: {actual} PII-free documents blocked at "
+                    f"'{destination}' > {limit}"
+                )
+
     modified = report["clean"]["documents_modified"]
     limits = thresholds.get("clean_corpus", {}).get("max_documents_modified", {})
     for destination, limit in limits.items():

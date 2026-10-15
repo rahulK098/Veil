@@ -137,6 +137,41 @@ def aggregate(per_example: Iterable[dict[str, list[int]]]) -> list[EntityMetrics
     )
 
 
+class HardCaseMetrics(BaseModel):
+    """Results on the curated hard set (ADR-0013), reported apart from the main corpus."""
+
+    model_config = ConfigDict(frozen=True)
+
+    positives: int
+    positive_spans: int
+    positives_found: int
+    missed_by_entity: dict[str, int]
+    miss_examples: tuple[Miss, ...]
+
+    negatives: int
+    negatives_with_detection: int
+    negative_detections_by_entity: dict[str, int]
+    negatives_blocked: dict[str, int] = Field(
+        description="Per destination: hard negatives a policy would reject outright"
+    )
+    block_examples: tuple[str, ...] = Field(
+        description="Example ids of hard negatives that would block, for the report"
+    )
+
+    @property
+    def positive_recall(self) -> float:
+        return self.positives_found / self.positive_spans if self.positive_spans else 0.0
+
+    @property
+    def negative_fp_rate(self) -> float:
+        return self.negatives_with_detection / self.negatives if self.negatives else 0.0
+
+    def block_rate(self, destination: str) -> float:
+        return (
+            self.negatives_blocked.get(destination, 0) / self.negatives if self.negatives else 0.0
+        )
+
+
 class CleanCorpusMetrics(BaseModel):
     model_config = ConfigDict(frozen=True)
 

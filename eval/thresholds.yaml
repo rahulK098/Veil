@@ -50,3 +50,17 @@ clean_corpus:
     # Any regression in PERSON calibration shows up here immediately.
     logs: 20
     vector_store: 20
+
+# Curated hard set (ADR-0013). These are ratchets at the level measured on 2026-10-15, not
+# aspirations: they stop the hard numbers sliding while detection is tuned. Raise them
+# deliberately when a change improves the measurement.
+hard:
+  min_positive_recall: 0.65     # measured 0.69
+  max_negative_fp_rate: 0.85    # measured 0.80
+  # The severe one: PII-free business text refused outright. Measured 2/20 at every
+  # destination. This must never grow.
+  max_blocked:
+    model: 2
+    response: 2
+    logs: 2
+    vector_store: 2

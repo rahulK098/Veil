@@ -145,8 +145,23 @@ invented — see [ADR-0011](docs/adr/0011-realistic-phone-numbers-in-eval.md) fo
 dataset defect rather than a detector gap, and why catching them would put a false phone
 number in 97 of 100 clean documents.
 
-With 16 of 18 entities at 1.00, this corpus is close to saturated: it is a good *regression*
-harness but no longer a difficulty benchmark. The full report lives in `docs/eval/` (local).
+With 16 of 18 entities at 1.00, this corpus is close to saturated — a good *regression*
+harness, not a difficulty benchmark. So there is a second, deliberately hard one
+([ADR-0013](docs/adr/0013-hard-evaluation-set.md)), reported separately:
+
+| Hard set (42 curated documents) | Result |
+|---|---|
+| Real PII in awkward shapes (JSON, URLs, obfuscation, international formats) | **69 % recall** (18/26 spans) |
+| PII-free text that *looks* like PII (semver, UUIDs, git SHAs, order numbers) | **80 %** produce a false detection |
+| **PII-free text that would be refused outright** | **10 %** (2/20) |
+
+That last row is the number precision and recall cannot show you: `cost centre 536-22-8741`
+and `line items 4111 1111 1111 1111 units` are ordinary business sentences, and under the
+shipped policy a user sending either gets their request **blocked**. Some of this is
+irreducible — a ledger code can be character-identical to an SSN — which is an argument for
+tuning `block` rules per destination rather than for a cleverer detector.
+
+Easy PII is solved; hard PII is not. Both numbers are published. Full reports in `docs/eval/`.
 
 ## Project layout
 

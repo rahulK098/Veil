@@ -15,6 +15,7 @@ from veil.evaluation.dataset import Example
 from veil.evaluation.metrics import (
     CleanCorpusMetrics,
     EntityMetrics,
+    HardCaseMetrics,
     Miss,
     aggregate,
     score_example,
@@ -61,6 +62,7 @@ class EvalResult(BaseModel):
     entity_metrics: list[EntityMetrics]
     misses: list[Miss]
     clean: CleanCorpusMetrics
+    hard: HardCaseMetrics | None = None
     latency: list[LatencyStats]
     block_demo: BlockDemo | None
     blocked_at_model: dict[str, int] = Field(
@@ -68,7 +70,63 @@ class EvalResult(BaseModel):
     )
 
 
-def evaluate(guard: Guard, labelled: Sequence[Example], clean: Sequence[Example]) -> EvalResult:
+def evaluate_hard(
+    guard: Guard,
+    positives: Sequence[Example],
+    negatives: Sequence[Example],
+) -> HardCaseMetrics:
+    """Score the curated hard set (ADR-0013)."""
+    found = 0
+    spans = 0
+    missed: Counter[str] = Counter()
+    miss_examples: list[Miss] = []
+    for ex in positives:
+        spans += len(ex.spans)
+        _, misses = score_example(ex, guard.detection.detect(ex.text))
+        for miss in misses:
+            if miss.kind == "fn":
+                missed[miss.entity_type] += 1
+                miss_examples.append(miss)
+        found += len(ex.spans) - sum(1 for m in misses if m.kind == "fn")
+
+    with_detection = 0
+    by_entity: Counter[str] = Counter()
+    blocked: Counter[str] = Counter()
+    block_ids: list[str] = []
+    for ex in negatives:
+        detections = guard.detection.detect(ex.text)
+        if detections:
+            with_detection += 1
+        by_entity.update(d.entity_type for d in detections)
+        blocks_anywhere = False
+        for dest in Destination:
+            if guard.scan(ex.text, dest).blocked:
+                blocked[dest.value] += 1
+                blocks_anywhere = True
+        if blocks_anywhere:
+            block_ids.append(ex.id)
+
+    return HardCaseMetrics(
+        positives=len(positives),
+        positive_spans=spans,
+        positives_found=found,
+        missed_by_entity=dict(sorted(missed.items())),
+        miss_examples=tuple(miss_examples),
+        negatives=len(negatives),
+        negatives_with_detection=with_detection,
+        negative_detections_by_entity=dict(sorted(by_entity.items())),
+        negatives_blocked=dict(blocked),
+        block_examples=tuple(block_ids),
+    )
+
+
+def evaluate(
+    guard: Guard,
+    labelled: Sequence[Example],
+    clean: Sequence[Example],
+    hard_positives: Sequence[Example] = (),
+    hard_negatives: Sequence[Example] = (),
+) -> EvalResult:
     guard.warm_up()
     per_example: list[dict[str, list[int]]] = []
     misses: list[Miss] = []
@@ -85,6 +143,11 @@ def evaluate(guard: Guard, labelled: Sequence[Example], clean: Sequence[Example]
         entity_metrics=aggregate(per_example),
         misses=misses,
         clean=_clean_corpus(guard, clean),
+        hard=(
+            evaluate_hard(guard, hard_positives, hard_negatives)
+            if hard_positives or hard_negatives
+            else None
+        ),
         latency=[_latency(guard, labelled, dest) for dest in _LATENCY_DESTINATIONS],
         block_demo=_block_demo(guard, labelled),
         blocked_at_model=_blocked_at_model(guard, labelled),

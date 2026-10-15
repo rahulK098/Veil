@@ -18,6 +18,8 @@ from veil import Guard
 from veil.evaluation import (
     evaluate,
     generate_clean,
+    generate_hard_negatives,
+    generate_hard_positives,
     generate_labelled,
     read_jsonl,
     render_markdown,
@@ -48,7 +50,13 @@ def main() -> None:
     clean = read_jsonl(DATA_DIR / "clean.jsonl")
     guard = Guard.from_policy(args.policy, hasher=Hasher(b"eval-only-key"))
 
-    result = evaluate(guard, labelled, clean)
+    result = evaluate(
+        guard,
+        labelled,
+        clean,
+        hard_positives=generate_hard_positives(),
+        hard_negatives=generate_hard_negatives(),
+    )
 
     json_path = ROOT / "eval" / "reports" / f"{args.tag}.json"
     md_path = ROOT / "docs" / "eval" / f"{args.tag}.md"
@@ -69,6 +77,16 @@ def main() -> None:
     for lat in result.latency:
         print(f"latency {lat.destination}: p50 {lat.p50_ms} ms, p95 {lat.p95_ms} ms")
     print(f"block demo: {'yes' if result.block_demo else 'NO'}")
+    if result.hard is not None:
+        h = result.hard
+        print(
+            f"hard positives: {h.positives_found}/{h.positive_spans} spans "
+            f"({h.positive_recall:.0%} recall)"
+        )
+        print(
+            f"hard negatives: {h.negatives_with_detection}/{h.negatives} with a detection; "
+            f"would BLOCK {h.negatives_blocked.get('model', 0)} at model"
+        )
     print(f"wrote {json_path} and {md_path}")
 
 
